@@ -23,6 +23,9 @@ const jitsi_options = {
 @classic
 export default class VideoroomForm extends Component.extend(FormMixin) {
   @service confirm;
+  @service ajax;
+  @service session;
+
 
   @tracked integrationLoading = false;
   @tracked loading = false;
@@ -34,6 +37,29 @@ export default class VideoroomForm extends Component.extend(FormMixin) {
   @tracked previousVideo = '';
   @tracked showUpdateOptions = false;
   @tracked endCurrentMeeting = false;
+  @tracked translationChannels = [];
+
+  
+
+  init() {
+    super.init(...arguments);
+    this.ajax.set('host', "http://localhost:8080");
+    this.setAuthorizationHeader();
+  }
+
+  setAuthorizationHeader() {
+    console.log('Session data:', this.session);
+
+    const jwt = this.session.jwt; // Access the JWT token from the injected service or location
+    const currentHeaders = this.ajax.get('headers') || {};
+    const updatedHeaders = {
+      ...currentHeaders,
+      // Authorization: `Bearer ${jwt}`
+      Authorization: 'JWT eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE2ODk2NjAzMjcsIm5iZiI6MTY4OTY2MDMyNywianRpIjoiMDI3MTUyNzYtMDcwOS00ZDlhLThkN2UtMWRkZGU1MDM5OTdjIiwiZXhwIjoxNjg5NzQ2NzI3LCJpZGVudGl0eSI6MTcyLCJmcmVzaCI6dHJ1ZSwidHlwZSI6ImFjY2VzcyIsImNzcmYiOiJhMzJkZmYxMC1mYzg2LTQ1MmItYjkyZi0zMjZmZTI0NzJkNDMifQ.rU1M7mQuKuW46C0N7-CrU6be91QQsDdKFLj30VqBRTM'
+    };
+
+    this.ajax.set('headers', updatedHeaders);
+  }
 
   get recordingColumns() {
     return [
@@ -74,10 +100,58 @@ export default class VideoroomForm extends Component.extend(FormMixin) {
     ];
   }
 
+
+  async loadTranslationChannels() {
+    const videoStreamId = this.data.stream.get("id"); // Get the current video stream id from the route
+    const responseData = await this.ajax.request(`/v1/video-streams/${videoStreamId}/translation_channels` , {
+        method: "GET",
+        contentType: "application/vnd.api+json"
+    });
+    this.translationChannels = responseData.data.map(channel => channel.attributes);
+  }
+
+
+  @action
+  addChannel() {
+    event.preventDefault();
+    this.translationChannels = [...this.translationChannels, { name: '', url: '' }];
+  }
+
+  @action
+  removeChannel(index) {
+    this.translationChannels = this.translationChannels.filter((_, i) => i !== index);
+  }
+
+  @action
+  updateChannelName(index, event) {
+    let newChannels = [...this.translationChannels];
+    newChannels[index].name = event.target.value;
+    this.translationChannels = newChannels;
+  }
+
+  @action
+  updateChannelUrl(index, event) {
+    let newChannels = [...this.translationChannels];
+    newChannels[index].url = event.target.value;
+    this.translationChannels = newChannels;
+  }
+
+  @action
+  async saveChannels() {z
+    // You can access the input field values via this.translationChannels
+
+    // Your save logic here
+  }
+
+
+  
+
+
   @computed('data.stream.rooms.[]')
   get room() {
     return this.data.stream.rooms.toArray()[0];
   }
+  
 
   @action
   setRoom(room) {
@@ -330,13 +404,67 @@ export default class VideoroomForm extends Component.extend(FormMixin) {
     event.preventDefault();
     this.onValid(async() => {
       try {
+        this.setAuthorizationHeader();
         this.set('isLoading', true);
+
+        // const response = await this.loader.post('/translation_channels', this.data.stream);
+        // const response = await this.loader.post('/translation_channels', {
+        //   headers: {
+        //       'Content-Type': 'application/vnd.api+json'
+        //   },
+        //     data: JSON.stringify(this.data.stream)
+        // });
+
+        // Iterate over the translationChannels array and send a POST request for each channel
+        for (const channel of this.translationChannels) {
+          const response = await this.ajax.request('/v1/translation_channels', {
+            // headers: {
+            //   'Content-Type': 'text/plain'
+            // },
+            method: "POST",
+            contentType: "application/vnd.api+json",
+            data: JSON.stringify({
+              data: {
+                type: 'translation_channel',
+                attributes: {
+                  name: channel.name,
+                  url: channel.url,
+                },
+                relationships: {
+                  video_stream: {
+                    data: {
+                      type: 'video_stream',
+                      id: this.data.stream.get("id") // Replace this with the appropriate video_stream ID
+                    }
+                  },
+                  channel: {
+                    data: {
+                      type: 'video_channel',
+                      id: this.data.stream.videoChannel.get("id") // Replace this with the appropriate video_channel ID
+                    }
+                  }
+                }
+              }
+            })
+          });
+        }
+
+        if (response.status) {
+          this.notify.success(this.l10n.t('Your stream has been saved'), {
+            id: 'stream_save'
+          });
+          this.router.transitionTo('events.view.videoroom', this.data.event.id);
+        }
+
         if (this.data.stream.extra?.bbb_options) {
           this.data.stream.extra.bbb_options.endCurrentMeeting = this
             .showUpdateOptions
             ? this.endCurrentMeeting
             : false;
         }
+
+          this.data.stream.translationChannels = this.translationChannels;
+
         await this.data.stream.save();
         const saveModerators = this.data.stream.moderators
           .toArray()
@@ -425,6 +553,7 @@ export default class VideoroomForm extends Component.extend(FormMixin) {
   }
 
   didInsertElement() {
+    this.loadTranslationChannels();
     if (this.data.stream.videoChannel.get('provider') === 'bbb') {
       if (this.data.stream.extra?.bbb_options) {
         this.set('actualBBBExtra', { ...this.data.stream.extra.bbb_options });
