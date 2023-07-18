@@ -3,11 +3,9 @@
 // import { slugify, stringHashCode } from 'open-event-frontend/utils/text';
 
 
-
 // export default class TranslationChannel extends ModelBase.extend() {
 //   @attr() name!: string;
 //   @attr() url!: string;
-
 
 
 //   get slugName(): string {

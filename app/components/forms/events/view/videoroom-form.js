@@ -39,18 +39,17 @@ export default class VideoroomForm extends Component.extend(FormMixin) {
   @tracked endCurrentMeeting = false;
   @tracked translationChannels = [];
 
-  
 
   init() {
     super.init(...arguments);
-    this.ajax.set('host', "http://localhost:8080");
+    this.ajax.set('host', 'http://localhost:8080');
     this.setAuthorizationHeader();
   }
 
   setAuthorizationHeader() {
     console.log('Session data:', this.session);
 
-    const jwt = this.session.jwt; // Access the JWT token from the injected service or location
+    const { jwt } = this.session; // Access the JWT token from the injected service or location
     const currentHeaders = this.ajax.get('headers') || {};
     const updatedHeaders = {
       ...currentHeaders,
@@ -102,19 +101,63 @@ export default class VideoroomForm extends Component.extend(FormMixin) {
 
 
   async loadTranslationChannels() {
-    const videoStreamId = this.data.stream.get("id"); // Get the current video stream id from the route
-    const responseData = await this.ajax.request(`/v1/video-streams/${videoStreamId}/translation_channels` , {
-        method: "GET",
-        contentType: "application/vnd.api+json"
+    const videoStreamId = this.data.stream.get('id'); // Get the current video stream id from the route
+    const responseData = await this.ajax.request(`/v1/video-streams/${videoStreamId}/translation_channels`, {
+      method      : 'GET',
+      contentType : 'application/vnd.api+json'
     });
-    this.translationChannels = responseData.data.map(channel => channel.attributes);
+    // this.translationChannels = responseData.data.map(channel => channel.attributes);
+    this.translationChannels = responseData.data.map(channel => ({
+      id: channel.id,
+      ...channel.attributes
+    }));
   }
 
 
   @action
   addChannel() {
     event.preventDefault();
-    this.translationChannels = [...this.translationChannels, { name: '', url: '' }];
+    this.translationChannels = [...this.translationChannels, { id:'', name: '', url: '' }];
+  }
+
+  @action
+  async updateChannel(index, id) {
+    event.preventDefault();
+    console.log("AHAHAHAH")
+    const channel = this.translationChannels[index]
+    const response = await this.ajax.request(`/v1/translation_channels/${id}`, {
+      // headers: {
+      //   'Content-Type': 'text/plain'
+      // },
+      method      : 'PATCH',
+      contentType : 'application/vnd.api+json',
+      data        : JSON.stringify({
+        data: {
+          type       : 'translation_channel',
+          attributes : {
+            name : channel.name,
+            url  : channel.url,
+            id: id
+          },
+          relationships: {
+            video_stream: {
+              data: {
+                type : 'video_stream',
+                id   : this.data.stream.get('id') // Replace this with the appropriate video_stream ID
+              }
+            },
+            channel: {
+              data: {
+                type : 'video_channel',
+                id   : this.data.stream.videoChannel.get('id') // Replace this with the appropriate video_channel ID
+              }
+            }
+          }
+        }
+      })
+    });
+
+
   }
 
   @action
@@ -124,34 +167,25 @@ export default class VideoroomForm extends Component.extend(FormMixin) {
 
   @action
   updateChannelName(index, event) {
-    let newChannels = [...this.translationChannels];
+    const newChannels = [...this.translationChannels];
     newChannels[index].name = event.target.value;
     this.translationChannels = newChannels;
   }
 
   @action
   updateChannelUrl(index, event) {
-    let newChannels = [...this.translationChannels];
+    const newChannels = [...this.translationChannels];
     newChannels[index].url = event.target.value;
     this.translationChannels = newChannels;
   }
 
-  @action
-  async saveChannels() {z
-    // You can access the input field values via this.translationChannels
-
-    // Your save logic here
-  }
-
-
-  
 
 
   @computed('data.stream.rooms.[]')
   get room() {
     return this.data.stream.rooms.toArray()[0];
   }
-  
+
 
   @action
   setRoom(room) {
@@ -421,26 +455,26 @@ export default class VideoroomForm extends Component.extend(FormMixin) {
             // headers: {
             //   'Content-Type': 'text/plain'
             // },
-            method: "POST",
-            contentType: "application/vnd.api+json",
-            data: JSON.stringify({
+            method      : 'POST',
+            contentType : 'application/vnd.api+json',
+            data        : JSON.stringify({
               data: {
-                type: 'translation_channel',
-                attributes: {
-                  name: channel.name,
-                  url: channel.url,
+                type       : 'translation_channel',
+                attributes : {
+                  name : channel.name,
+                  url  : channel.url
                 },
                 relationships: {
                   video_stream: {
                     data: {
-                      type: 'video_stream',
-                      id: this.data.stream.get("id") // Replace this with the appropriate video_stream ID
+                      type : 'video_stream',
+                      id   : this.data.stream.get('id') // Replace this with the appropriate video_stream ID
                     }
                   },
                   channel: {
                     data: {
-                      type: 'video_channel',
-                      id: this.data.stream.videoChannel.get("id") // Replace this with the appropriate video_channel ID
+                      type : 'video_channel',
+                      id   : this.data.stream.videoChannel.get('id') // Replace this with the appropriate video_channel ID
                     }
                   }
                 }
@@ -463,7 +497,7 @@ export default class VideoroomForm extends Component.extend(FormMixin) {
             : false;
         }
 
-          this.data.stream.translationChannels = this.translationChannels;
+        this.data.stream.translationChannels = this.translationChannels;
 
         await this.data.stream.save();
         const saveModerators = this.data.stream.moderators

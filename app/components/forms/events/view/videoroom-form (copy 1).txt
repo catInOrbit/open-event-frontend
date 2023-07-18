@@ -256,6 +256,9 @@
       <button class="ui icon button" {{on "click" (fn this.removeChannel index)}}>
         <i class="delete icon"></i>
       </button>
+      <button class="ui primary button" {{on "click" this.updateChannel index channel.id }}  >
+        Update
+      </button>
     </div>
   </div>
 
@@ -264,9 +267,11 @@
     <Input type="text" placeholder="Enter channel URL" @value={{channel.url}} />
   </div>
   {{/each}}
-  <button class="ui primary button" {{on "click" this.addChannel preventDefault=true stopPropagation=true}}  >
+  <button class="ui primary button" {{on "click" this.addChannel }}  >
     Add
   </button>
+
+  
 
 
   <div class="ui hidden divider"></div>
