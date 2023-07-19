@@ -24,7 +24,8 @@ const jitsi_options = {
 export default class VideoroomForm extends Component.extend(FormMixin) {
   @service confirm;
   @service ajax;
-  @service session;
+  @service cookies;
+
 
 
   @tracked integrationLoading = false;
@@ -47,14 +48,14 @@ export default class VideoroomForm extends Component.extend(FormMixin) {
   }
 
   setAuthorizationHeader() {
-    console.log('Session data:', this.session);
+    let cookieContent = this.cookies.read('ember_simple_auth-session'); // replace 'cookie-name' with the name of your cookie
+    let parsedContent = JSON.parse(decodeURIComponent(cookieContent));
+    let accessToken = parsedContent.authenticated.access_token;
 
-    const { jwt } = this.session; // Access the JWT token from the injected service or location
     const currentHeaders = this.ajax.get('headers') || {};
     const updatedHeaders = {
       ...currentHeaders,
-      // Authorization: `Bearer ${jwt}`
-      Authorization: 'JWT eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE2ODk2NjAzMjcsIm5iZiI6MTY4OTY2MDMyNywianRpIjoiMDI3MTUyNzYtMDcwOS00ZDlhLThkN2UtMWRkZGU1MDM5OTdjIiwiZXhwIjoxNjg5NzQ2NzI3LCJpZGVudGl0eSI6MTcyLCJmcmVzaCI6dHJ1ZSwidHlwZSI6ImFjY2VzcyIsImNzcmYiOiJhMzJkZmYxMC1mYzg2LTQ1MmItYjkyZi0zMjZmZTI0NzJkNDMifQ.rU1M7mQuKuW46C0N7-CrU6be91QQsDdKFLj30VqBRTM'
+      Authorization: `JWT ${accessToken}`
     };
 
     this.ajax.set('headers', updatedHeaders);
@@ -133,23 +134,23 @@ export default class VideoroomForm extends Component.extend(FormMixin) {
       contentType : 'application/vnd.api+json',
       data        : JSON.stringify({
         data: {
-          type       : 'translation_channel',
+          type: 'translation_channel',
+          id: `${channel.id}`,
           attributes : {
             name : channel.name,
             url  : channel.url,
-            id: id
           },
           relationships: {
             video_stream: {
               data: {
                 type : 'video_stream',
-                id   : this.data.stream.get('id') // Replace this with the appropriate video_stream ID
+                id   : this.data.stream.get('id') 
               }
             },
             channel: {
               data: {
                 type : 'video_channel',
-                id   : this.data.stream.videoChannel.get('id') // Replace this with the appropriate video_channel ID
+                id   : this.data.stream.videoChannel.get('id')
               }
             }
           }
