@@ -39,6 +39,7 @@ export default class VideoroomForm extends Component.extend(FormMixin) {
   @tracked showUpdateOptions = false;
   @tracked endCurrentMeeting = false;
   @tracked translationChannels = [];
+  @tracked translationChannelsNew = [];
 
 
   init() {
@@ -118,7 +119,7 @@ export default class VideoroomForm extends Component.extend(FormMixin) {
   @action
   addChannel() {
     event.preventDefault();
-    this.translationChannels = [...this.translationChannels, { id:'', name: '', url: '' }];
+    this.translationChannelsNew = [...this.translationChannelsNew, { id:'', name: '', url: '' }];
   }
 
   @action
@@ -162,9 +163,19 @@ export default class VideoroomForm extends Component.extend(FormMixin) {
   }
 
   @action
-  removeChannel(index) {
+  async removeChannel(index, id) {
+    event.preventDefault();
+
     this.translationChannels = this.translationChannels.filter((_, i) => i !== index);
-  }
+
+    const response = await this.ajax.request(`/v1/translation_channels/${id}`, {
+        method      : 'DELETE',
+        contentType : 'application/vnd.api+json',
+      });
+
+
+    }
+    
 
   @action
   updateChannelName(index, event) {
@@ -451,11 +462,9 @@ export default class VideoroomForm extends Component.extend(FormMixin) {
         // });
 
         // Iterate over the translationChannels array and send a POST request for each channel
-        for (const channel of this.translationChannels) {
+        for (const channel of this.translationChannelsNew) {
           const response = await this.ajax.request('/v1/translation_channels', {
-            // headers: {
-            //   'Content-Type': 'text/plain'
-            // },
+
             method      : 'POST',
             contentType : 'application/vnd.api+json',
             data        : JSON.stringify({
@@ -484,12 +493,12 @@ export default class VideoroomForm extends Component.extend(FormMixin) {
           });
         }
 
-        if (response.status) {
-          this.notify.success(this.l10n.t('Your stream has been saved'), {
-            id: 'stream_save'
-          });
-          this.router.transitionTo('events.view.videoroom', this.data.event.id);
-        }
+        // if (response.status) {
+        //   this.notify.success(this.l10n.t('Your stream has been saved'), {
+        //     id: 'stream_save'
+        //   });
+        //   this.router.transitionTo('events.view.videoroom', this.data.event.id);
+        // }
 
         if (this.data.stream.extra?.bbb_options) {
           this.data.stream.extra.bbb_options.endCurrentMeeting = this

@@ -66,14 +66,19 @@
             <span class="ml-2">{{stream.name}}</span>
 
             </a>
-          <div class="ui inverted vertical fluid menu borderless stream-side-menu" >
               {{#each this.translationChannels as |channel|}}
+
+          <div class="ui inverted vertical fluid menu borderless stream-side-menu" >
               <div class=" ui item">
-                <h3>{{channel.name}}</h3>
-                <p>URL: {{channel.url}}</p>
+                <a href={{href-to 'public.stream.view' @event stream.slugName channel.url}} class="item stream-item d-flex items-center"><h3>{{channel.name}}</h3></a>
+                {{!-- <a href={{action this.navigateToStream @event channel.url}} class="item stream-item d-flex items-center"><h3>{{channel.name}}</h3></a> --}}
+                {{!-- <a href="#" {{action this.navigateToStream @event channel.url}} class="item stream-item d-flex items-center"><h3>{{channel.name}}</h3></a> --}}
+                {{!-- <a href={{href-to 'public.stream.view' channel.url}} {{on 'click' this.handleLinkClick}} class="{{if (eq @videoStream.id channel.id) 'video-active'}} item stream-item d-flex items-center">URL: {{channel.url}}</a> --}}
+                {{!-- <LinkTo @route='public.stream.view' @model={{channel.url}} @query={{hash muteYoutube=true}}>URL: {{channel.url}}</LinkTo> --}}
               </div>
-              {{/each}}
             </div>
+              {{/each}}
+
         {{/each}}
       </div>
     {{/if}}

@@ -10,8 +10,6 @@ import Loader from 'open-event-frontend/services/loader';
 import EventService from 'open-event-frontend/services/event';
 
 
-
-
 interface Args {
   videoStream: VideoStream,
   event: Event,
@@ -52,7 +50,6 @@ export default class PublicStreamSidePanel extends Component<Args> {
   }
 
   // Define other methods...
-  
   @service loader!: Loader;
   @service declare event: EventService;
   @service declare settings: any;
@@ -121,6 +118,7 @@ export default class PublicStreamSidePanel extends Component<Args> {
     if (this.streams.map(stream => stream.id).any(id => id === stream.id)) {return;}
     this.streams.push(stream);
   }
+
 
   @action
   async setup(): Promise<void> {
